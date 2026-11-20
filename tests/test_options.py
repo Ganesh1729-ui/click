@@ -1199,6 +1199,33 @@ def test_missing_envvar_sequence(runner, envvar, expected):
     assert f"Error: Missing option {expected}." in result.output
 
 
+def test_missing_envvar_auto_prefix(runner):
+    option = click.Option(["--port"], type=int, show_envvar=True, required=True)
+    cli = click.Command("cli", params=[option])
+    result = runner.invoke(cli, auto_envvar_prefix="MYAPP")
+    assert result.exit_code == 2
+    assert "Error: Missing option '--port' (env var: 'MYAPP_PORT')." in result.output
+
+    result = runner.invoke(cli, ["--port", "abc"], auto_envvar_prefix="MYAPP")
+    assert result.exit_code == 2
+    assert (
+        "Error: Invalid value for '--port' (env var: 'MYAPP_PORT'):"
+        " 'abc' is not a valid integer." in result.output
+    )
+
+    option_no_auto = click.Option(
+        ["--port"],
+        type=int,
+        show_envvar=True,
+        required=True,
+        allow_from_autoenv=False,
+    )
+    cli_no_auto = click.Command("cli", params=[option_no_auto])
+    result = runner.invoke(cli_no_auto, auto_envvar_prefix="MYAPP")
+    assert result.exit_code == 2
+    assert "Error: Missing option '--port'." in result.output
+
+
 def test_case_insensitive_choice(runner):
     @click.command()
     @click.option("--foo", type=click.Choice(["Orange", "Apple"], case_sensitive=False))
